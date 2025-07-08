@@ -76,6 +76,8 @@ class BedrockLargeLanguageModel(LargeLanguageModel):
         {"prefix": "us.anthropic.claude-3", "support_system_prompts": True, "support_tool_use": True},
         {"prefix": "eu.anthropic.claude-3", "support_system_prompts": True, "support_tool_use": True},
         {"prefix": "anthropic.claude-3", "support_system_prompts": True, "support_tool_use": True},
+        {"prefix": "us.anthropic.claude-opus-4", "support_system_prompts": True, "support_tool_use": True},
+        {"prefix": "us.anthropic.claude-sonnet-4", "support_system_prompts": True, "support_tool_use": True},
         {"prefix": "us.meta.llama3-2", "support_system_prompts": True, "support_tool_use": True},
         {"prefix": "meta.llama", "support_system_prompts": True, "support_tool_use": False},
         {"prefix": "mistral.mistral-7b-instruct", "support_system_prompts": False, "support_tool_use": False},
@@ -663,13 +665,35 @@ class BedrockLargeLanguageModel(LargeLanguageModel):
         if isinstance(message, UserPromptMessage):
             message = cast(UserPromptMessage, message)
             if isinstance(message.content, str):
-                message_dict = {"role": "user", "content": [{"text": message.content}]}
+                # Check for cache tag in text
+                if "<cache>" in message.content:
+                    # Replace the tag and add cache_control
+                    message_dict = {
+                        "role": "user", 
+                        "content": [
+                            {
+                                "text": message.content.replace("<cache>", ""),
+                                "cache_control": {"type": "ephemeral"}
+                            }
+                        ]
+                    }
+                    print(f"[CACHE DEBUG] Added cache control to user message: {message.content[:50]}...")
+                else:
+                    message_dict = {"role": "user", "content": [{"text": message.content}]}
             else:
                 sub_messages = []
                 for message_content in message.content:
                     if message_content.type == PromptMessageContentType.TEXT:
                         message_content = cast(TextPromptMessageContent, message_content)
-                        sub_message_dict = {"text": message_content.data}
+                        # Check for cache tag in text content
+                        if "<cache>" in message_content.data:
+                            sub_message_dict = {
+                                "text": message_content.data.replace("<cache>", ""),
+                                "cache_control": {"type": "ephemeral"}
+                            }
+                            print(f"[CACHE DEBUG] Added cache control to text content: {message_content.data[:50]}...")
+                        else:
+                            sub_message_dict = {"text": message_content.data}
                         sub_messages.append(sub_message_dict)
                     elif message_content.type == PromptMessageContentType.IMAGE:
                         message_content = cast(ImagePromptMessageContent, message_content)
@@ -706,23 +730,66 @@ class BedrockLargeLanguageModel(LargeLanguageModel):
                     ],
                 }
             else:
-                message_dict = {"role": "assistant", "content": [{"text": message.content}]}
+                # Check for cache tag in assistant message
+                if "<cache>" in message.content:
+                    message_dict = {
+                        "role": "assistant", 
+                        "content": [
+                            {
+                                "text": message.content.replace("<cache>", ""),
+                                "cache_control": {"type": "ephemeral"}
+                            }
+                        ]
+                    }
+                    print(f"[CACHE DEBUG] Added cache control to assistant message: {message.content[:50]}...")
+                else:
+                    message_dict = {"role": "assistant", "content": [{"text": message.content}]}
         elif isinstance(message, SystemPromptMessage):
             message = cast(SystemPromptMessage, message)
-            message_dict = [{"text": message.content}]
+            # Check for cache tag in system message
+            if "<cache>" in message.content:
+                message_dict = [
+                    {
+                        "text": message.content.replace("<cache>", ""),
+                        "cache_control": {"type": "ephemeral"}
+                    }
+                ]
+                print(f"[CACHE DEBUG] Added cache control to system message: {message.content[:50]}...")
+            else:
+                message_dict = [{"text": message.content}]
         elif isinstance(message, ToolPromptMessage):
             message = cast(ToolPromptMessage, message)
-            message_dict = {
-                "role": "user",
-                "content": [
-                    {
-                        "toolResult": {
-                            "toolUseId": message.tool_call_id,
-                            "content": [{"json": {"text": message.content}}],
+            # Check for cache tag in tool message
+            if "<cache>" in message.content:
+                message_dict = {
+                    "role": "user",
+                    "content": [
+                        {
+                            "toolResult": {
+                                "toolUseId": message.tool_call_id,
+                                "content": [
+                                    {
+                                        "json": {"text": message.content.replace("<cache>", "")},
+                                        "cache_control": {"type": "ephemeral"}
+                                    }
+                                ],
+                            }
                         }
-                    }
-                ],
-            }
+                    ],
+                }
+                print(f"[CACHE DEBUG] Added cache control to tool result: {message.content[:50]}...")
+            else:
+                message_dict = {
+                    "role": "user",
+                    "content": [
+                        {
+                            "toolResult": {
+                                "toolUseId": message.tool_call_id,
+                                "content": [{"json": {"text": message.content}}],
+                            }
+                        }
+                    ],
+                }
         else:
             raise ValueError(f"Got unknown type {message}")
         return message_dict

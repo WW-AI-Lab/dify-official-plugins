@@ -16,6 +16,8 @@ CACHE_SUPPORTED_MODELS = [
     "eu.anthropic.claude-3-7-sonnet-20250219-v1:0",
     "eu.anthropic.claude-3-5-haiku-20241022-v1:0",
     "eu.anthropic.claude-3-5-sonnet-20241022-v2:0",
+    "us.anthropic.claude-opus-4-20250514-v1:0",
+    "us.anthropic.claude-sonnet-4-20250514-v1:0",
     "amazon.nova-micro-v1:0",
     "amazon.nova-lite-v1:0",
     "amazon.nova-pro-v1:0",
@@ -67,6 +69,16 @@ CACHE_CONFIG = {
         "supported_fields": ["system", "messages", "tools"]
     },
     "eu.anthropic.claude-3-5-sonnet-20241022-v2:0": {
+        "min_tokens": 1024,
+        "max_checkpoints": 4,
+        "supported_fields": ["system", "messages", "tools"]
+    },
+    "us.anthropic.claude-opus-4-20250514-v1:0": {
+        "min_tokens": 1024,
+        "max_checkpoints": 4,
+        "supported_fields": ["system", "messages", "tools"]
+    },
+    "us.anthropic.claude-sonnet-4-20250514-v1:0": {
         "min_tokens": 1024,
         "max_checkpoints": 4,
         "supported_fields": ["system", "messages", "tools"]
